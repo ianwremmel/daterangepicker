@@ -77,7 +77,9 @@
             customRangeLabel: 'Custom Range',
             daysOfWeek: moment.weekdaysMin(),
             monthNames: moment.monthsShort(),
-            firstDay: moment.localeData().firstDayOfWeek()
+            firstDay: moment.localeData().firstDayOfWeek(),
+            fromLabel: 'From',
+            toLabel: 'To'
         };
 
         this.callback = function() { };
@@ -129,7 +131,13 @@
 
             if (typeof options.locale.format === 'string')
                 this.locale.format = options.locale.format;
+            
+            if (typeof options.locale.fromLabel === 'string')
+                this.locale.fromLabel = options.locale.fromLabel;
 
+            if (typeof options.locale.toLabel === 'string')
+                this.locale.toLabel = options.locale.toLabel;
+            
             if (typeof options.locale.separator === 'string')
                 this.locale.separator = options.locale.separator;
 
@@ -161,8 +169,39 @@
         }
         this.container.addClass(this.locale.direction);
 
-        if (typeof options.startDate === 'string')
-            this.startDate = moment(options.startDate, this.locale.format);
+        switch (typeof options.startDate) {
+            case 'object':
+                if (options.startDate) {
+                    this.startDate = moment(options.startDate);
+                }
+                else {
+                    this.startDate = undefined;
+                }
+                break;
+            case 'string':
+                this.startDate = moment(options.startDate, this.locale.format);
+                break;
+            case 'undefined':
+                this.startDate = undefined;
+                break;
+        }
+
+        switch (typeof options.endDate) {
+            case 'object':
+                if (options.endDate) {
+                    this.endDate = moment(options.endDate);
+                }
+                else {
+                    this.endDate = undefined;
+                }
+                break;
+            case 'string':
+                this.endDate = moment(options.endDate, this.locale.format);
+                break;
+            case 'undefined':
+                this.endDate = undefined;
+                break;
+        }
 
         if (typeof options.endDate === 'string')
             this.endDate = moment(options.endDate, this.locale.format);
@@ -172,12 +211,6 @@
 
         if (typeof options.maxDate === 'string')
             this.maxDate = moment(options.maxDate, this.locale.format);
-
-        if (typeof options.startDate === 'object')
-            this.startDate = moment(options.startDate);
-
-        if (typeof options.endDate === 'object')
-            this.endDate = moment(options.endDate);
 
         if (typeof options.minDate === 'object')
             this.minDate = moment(options.minDate);
@@ -364,8 +397,12 @@
         }
 
         if (!this.timePicker) {
-            this.startDate = this.startDate.startOf('day');
-            this.endDate = this.endDate.endOf('day');
+            if (this.startDate) {
+                this.startDate = this.startDate.startOf('day');
+            }
+            if (this.endDate) {
+                this.endDate = this.endDate.endOf('day');
+            }
             this.container.find('.calendar-time').hide();
         }
 
@@ -504,7 +541,9 @@
 
             this.previousRightTime = this.endDate.clone();
 
-            this.container.find('.drp-selected').html(this.startDate.format(this.locale.format) + this.locale.separator + this.endDate.format(this.locale.format));
+            if (this.startDate != null && this.endDate != null) {
+                this.container.find('.drp-selected').html(this.startDate.format(this.locale.format) + this.locale.separator + this.endDate.format(this.locale.format));
+            }
 
             if (!this.isShowing)
                 this.updateElement();
@@ -530,7 +569,7 @@
                     this.container.find('.right .calendar-time select').removeAttr('disabled').removeClass('disabled');
                 }
             }
-            if (this.endDate)
+            if (this.endDate && this.startDate)
                 this.container.find('.drp-selected').html(this.startDate.format(this.locale.format) + this.locale.separator + this.endDate.format(this.locale.format));
             this.updateMonthsInView();
             this.updateCalendars();
@@ -542,25 +581,30 @@
 
                 //if both dates are visible already, do nothing
                 if (!this.singleDatePicker && this.leftCalendar.month && this.rightCalendar.month &&
-                    (this.startDate.format('YYYY-MM') == this.leftCalendar.month.format('YYYY-MM') || this.startDate.format('YYYY-MM') == this.rightCalendar.month.format('YYYY-MM'))
+                    (this.startDate != null && (this.startDate.format('YYYY-MM') == this.leftCalendar.month.format('YYYY-MM') || this.startDate.format('YYYY-MM') == this.rightCalendar.month.format('YYYY-MM')))
                     &&
                     (this.endDate.format('YYYY-MM') == this.leftCalendar.month.format('YYYY-MM') || this.endDate.format('YYYY-MM') == this.rightCalendar.month.format('YYYY-MM'))
                     ) {
                     return;
                 }
 
-                this.leftCalendar.month = this.startDate.clone().date(2);
-                if (!this.linkedCalendars && (this.endDate.month() != this.startDate.month() || this.endDate.year() != this.startDate.year())) {
-                    this.rightCalendar.month = this.endDate.clone().date(2);
-                } else {
-                    this.rightCalendar.month = this.startDate.clone().date(2).add(1, 'month');
+                if (this.startDate != null) {
+                    this.leftCalendar.month = this.startDate.clone().date(2);
+                    if (!this.linkedCalendars && (this.endDate.month() != this.startDate.month() || this.endDate.year() != this.startDate.year())) {
+                        this.rightCalendar.month = this.endDate.clone().date(2);
+                    } else {
+                        this.rightCalendar.month = this.startDate.clone().date(2).add(1, 'month');
+                    }
                 }
-
-            } else {
+            } else if (this.startDate) {
                 if (this.leftCalendar.month.format('YYYY-MM') != this.startDate.format('YYYY-MM') && this.rightCalendar.month.format('YYYY-MM') != this.startDate.format('YYYY-MM')) {
                     this.leftCalendar.month = this.startDate.clone().date(2);
                     this.rightCalendar.month = this.startDate.clone().date(2).add(1, 'month');
                 }
+            }
+            else {
+                this.leftCalendar.month = moment().date(2);
+                this.rightCalendar.month = moment().date(2).add(1, 'month');
             }
             if (this.maxDate && this.linkedCalendars && !this.singleDatePicker && this.rightCalendar.month > this.maxDate) {
               this.rightCalendar.month = this.maxDate.clone().date(2);
@@ -801,7 +845,7 @@
                         classes.push('off', 'disabled');
 
                     //highlight the currently selected start date
-                    if (calendar[row][col].format('YYYY-MM-DD') == this.startDate.format('YYYY-MM-DD'))
+                    if (this.startDate != null && calendar[row][col].format('YYYY-MM-DD') == this.startDate.format('YYYY-MM-DD'))
                         classes.push('active', 'start-date');
 
                     //highlight the currently selected end date
@@ -1006,7 +1050,7 @@
 
         updateFormInputs: function() {
 
-            if (this.singleDatePicker || (this.endDate && (this.startDate.isBefore(this.endDate) || this.startDate.isSame(this.endDate)))) {
+            if (this.singleDatePicker || (this.endDate && this.startDate && (this.startDate.isBefore(this.endDate) || this.startDate.isSame(this.endDate)))) {
                 this.container.find('button.applyBtn').removeAttr('disabled');
             } else {
                 this.container.find('button.applyBtn').attr('disabled', 'disabled');
@@ -1091,9 +1135,13 @@
             // Reposition the picker if the window is resized while it's open
             $(window).on('resize.daterangepicker', $.proxy(function(e) { this.move(e); }, this));
 
-            this.oldStartDate = this.startDate.clone();
-            this.oldEndDate = this.endDate.clone();
-            this.previousRightTime = this.endDate.clone();
+            if (this.startDate) {
+                this.oldStartDate = this.startDate.clone();
+            }
+            if (this.endDate) {
+                this.oldEndDate = this.endDate.clone();
+                this.previousRightTime = this.endDate.clone();
+            }
 
             this.updateView();
             this.container.show();
@@ -1107,12 +1155,16 @@
 
             //incomplete date selection, revert to last values
             if (!this.endDate) {
-                this.startDate = this.oldStartDate.clone();
-                this.endDate = this.oldEndDate.clone();
+                if (this.oldStartDate) {
+                    this.startDate = this.oldStartDate.clone();
+                }
+                if (this.oldEndDate) {
+                    this.endDate = this.oldEndDate.clone();
+                }
             }
 
             //if a new date range was selected, invoke the user callback function
-            if (!this.startDate.isSame(this.oldStartDate) || !this.endDate.isSame(this.oldEndDate))
+            if (this.startDate != null && this.endDate != null && (!this.startDate.isSame(this.oldStartDate) || !this.endDate.isSame(this.oldEndDate)))
                 this.callback(this.startDate.clone(), this.endDate.clone(), this.chosenLabel);
 
             //if picker is attached to a text input, update it
@@ -1491,9 +1543,10 @@
 
         updateElement: function() {
             if (this.element.is('input') && this.autoUpdateInput) {
-                var newValue = this.startDate.format(this.locale.format);
+                var newValue = this.startDate ? this.startDate.format(this.locale.format) : this.locale.fromLabel;
                 if (!this.singleDatePicker) {
-                    newValue += this.locale.separator + this.endDate.format(this.locale.format);
+                    newValue += this.locale.separator;
+                    newValue += this.endDate ? this.endDate.format(this.locale.format) : this.locale.toLabel
                 }
                 if (newValue !== this.element.val()) {
                     this.element.val(newValue).trigger('change');
